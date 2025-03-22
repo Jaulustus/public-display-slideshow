@@ -108,9 +108,9 @@ Eine elegante, moderne Bildergalerie-Slideshow für Werbezwecke mit verschiedene
 
 ## Installation
 
-1. Laden Sie die Dateien `werbung.php` und `werbung-settings.php` auf Ihren Webserver hoch
-2. Erstellen Sie ein Verzeichnis `assets/werbung/` auf Ihrem Server
-3. Legen Sie Ihre Bilder im `assets/werbung/` Verzeichnis ab (unterstützte Formate: JPG, JPEG, PNG, WEBP, GIF)
+1. Laden Sie die Dateien `index.php` und `config.php` auf Ihren Webserver hoch
+2. Erstellen Sie ein Verzeichnis `assets/bilder/` auf Ihrem Server
+3. Legen Sie Ihre Bilder im `assets/bilder/` Verzeichnis ab (unterstützte Formate: JPG, JPEG, PNG, WEBP, GIF)
 4. (Optional) Erstellen Sie ein Verzeichnis `assets/fonts/` und legen Sie die Poppins-Schriftarten dort ab
 
 ## Verwendung
@@ -120,13 +120,13 @@ Die Slideshow kann auf zwei Arten eingebunden werden:
 ### Als iframe (empfohlen)
 
 ```html
-<iframe src="werbung.php" width="100%" height="400" frameborder="0" allowfullscreen></iframe>
+<iframe src="index.php" width="100%" height="400" frameborder="0" allowfullscreen></iframe>
 ```
 
 ### Als direkter Link
 
 ```html
-<a href="werbung.php" target="_blank">Werbung öffnen</a>
+<a href="index.php" target="_blank">Index öffnen</a>
 ```
 
 ## URL-Parameter
@@ -141,7 +141,7 @@ Sie können verschiedene Parameter in der URL verwenden, um die Darstellung anzu
 
 Beispiel:
 ```
-werbung.php?mode=slide&interval=5000&transition=1000&ui=0&animation=flip
+index.php?mode=slide&interval=5000&transition=1000&ui=0&animation=flip
 ```
 
 ## Tastatursteuerung
@@ -156,7 +156,7 @@ werbung.php?mode=slide&interval=5000&transition=1000&ui=0&animation=flip
 
 ## Einstellungsseite
 
-Öffnen Sie `werbung-settings.php` im Browser, um die Slideshow zu konfigurieren und eine Vorschau der Einstellungen zu sehen.
+Öffnen Sie `config.php` im Browser, um die Slideshow zu konfigurieren und eine Vorschau der Einstellungen zu sehen.
 
 ## Lizenz
 
