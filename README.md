@@ -1,123 +1,119 @@
 # public-display-slideshow
-A PHP-based slideshow system for public screens. Runs on any local webserver and cycles through images for advertising or info purposes.
 
+A lightweight, PHP-based image slideshow for public displays, shop windows, or information terminals. Designed to work on any local or remote PHP-enabled web server, the slideshow cycles through images using smooth animations.
 
+## 🎬 Features
 
-# Advertising Slideshow
+- ✅ Simple animations: horizontal slide, vertical slide, and fade
+- 🔁 GIF support with configurable loop count
+- 🖥 Fullscreen mode (auto/manual)
+- ⏱ Configurable image display time and transition duration
+- 🧭 Keyboard navigation (next, previous, fullscreen, UI toggle)
+- 🧩 Responsive design for all screen sizes
+- ⚙️ Browser-based settings (`config.php`)
 
-An elegant, modern image gallery slideshow for public displays and advertising purposes. Offers various animation effects and configuration options. Runs on any local or remote PHP-enabled web server.
+## 📁 Supported Formats
 
-## Features
-
-- **Multiple animation types**: Fade, horizontal slide, vertical slide, zoom, 3D flip, rotation, blur, and 3D cube
-- **Fullscreen mode**: Automatic or manual fullscreen toggle
-- **Configurable display times**: Adjustable transition and display durations
-- **Responsive design**: Works on all screen sizes
-- **Keyboard controls**: Intuitive navigation with hotkeys
-- **Cross-browser**: Compatible with all modern browsers
-
-## Supported Formats
-
-### Current Formats
+### ✅ Current
 - JPG / JPEG
 - PNG
 - WebP (recommended)
-- GIF
+- GIF (including loop configuration)
 
-### Planned Formats (future versions)
+### 🛠 Planned
 - WebM videos
 - MP4 videos
+- YouTube video embedding
 
-## Installation
+## 🚀 Installation
 
-1. Upload the files `index.php` and `config.php` to your web server
-2. Create a directory `assets/advertising/` on your server
-3. Place your images inside the `assets/advertising/` folder (supported formats: JPG, JPEG, PNG, WEBP, GIF)
-4. (Optional) Create a directory `assets/fonts/` and add the Poppins font files for custom font support
+1. Upload `index.php` and `config.php` to your PHP-enabled web server.
+2. Create a folder: `assets/pictures/`
+3. Add your images to that folder (JPG, PNG, WebP, or GIF).
+4. (Optional) Add the Poppins font in `assets/fonts/` for better UI styling.
 
-## Usage
+## 🌐 Embedding the Slideshow
 
-You can embed the slideshow in two ways:
-
-### As an iframe (recommended)
-
+### Option 1: iframe (recommended)
 ```html
 <iframe src="index.php" width="100%" height="400" frameborder="0" allowfullscreen></iframe>
 ```
-## URL Parameters
+<a href="index.php" target="_blank">Open slideshow</a>
 
-You can use various URL parameters to customize the display:
+### 🛠 URL Parameters (EN)
 
-- **mode**: Display mode (`fade`, `slide`, `classic`)
-- **interval**: Time between image transitions in milliseconds (1000–60000)
-- **transition**: Duration of the transition in milliseconds (200–3000)
-- **ui**: Show (`1`) or hide (`0`) the UI controls
-- **animation**: Animation type (`slide-horizontal`, `slide-vertical`, `fade`, `zoom-in`, `zoom-out`, `flip`, `rotate`, `blur`, `cube`)
+Customize behavior using query parameters:
+
+| Parameter   | Description                                               | Example                 |
+|-------------|-----------------------------------------------------------|-------------------------|
+| `mode`      | Slideshow mode (`fade`, `slide`, `classic`)              | `mode=fade`             |
+| `interval`  | Image duration in milliseconds (1000–60000)              | `interval=5000`         |
+| `transition`| Transition duration in milliseconds (200–3000)           | `transition=1000`       |
+| `ui`        | Show (`1`) or hide (`0`) the UI                          | `ui=1`                  |
+| `animation` | Animation type: `slide-horizontal`, `slide-vertical`, `fade` | `animation=slide-horizontal` |
+
 
 **Example:**
 ```
-index.php?mode=slide&interval=5000&transition=1000&ui=0&animation=flip
+index.php?mode=slide&interval=5000&transition=1000&ui=0&animation=fade
 ```
 
+🔧 Settings Page
+Open config.php in a browser to preview and configure your slideshow.
 
-## Keyboard Control
-
-- **Arrow keys (left/right)**: Navigate to the previous or next image
-- **Spacebar**: Start or stop the slideshow
-- **F**: Toggle fullscreen mode
-- **ESC**: Stop the slideshow or exit fullscreen mode
-- **1**: Switch to fade mode
-- **2**: Switch to slide mode
-- **3**: Switch to classic mode
-
-## Settings Page
-
-Open `config.php` in your browser to configure the slideshow and preview your settings.
-
-## License
-
-MIT License – Free to use for any purpose.
+📜 License
+MIT License – free for personal or commercial use.
 
 
 # ----- Deutsch -----
 
 # Werbung Slideshow
 
-Eine elegante, moderne Bildergalerie-Slideshow für Werbezwecke mit verschiedenen Animationseffekten und Konfigurationsmöglichkeiten.
+Ein leichtgewichtiges PHP-Slideshow-System für Schaufenster, Infobildschirme oder öffentliche Displays. Funktioniert auf jedem Webserver mit PHP-Unterstützung.
 
-## Features
+🎬 Funktionen
+✅ Animationsarten: Horizontaler Slide, vertikaler Slide, Überblenden
 
-- **Mehrere Animationstypen**: Überblenden, Horizontaler Slide, Vertikaler Slide, Zoom, 3D-Flip, Rotation, Unschärfe und 3D-Würfel
-- **Vollbild-Modus**: Automatischer oder manueller Vollbildmodus
-- **Konfigurierbare Anzeigezeiten**: Einstellbare Übergangszeiten und Anzeigedauern
-- **Responsive Design**: Funktioniert auf allen Bildschirmgrößen
-- **Tastatursteuerung**: Intuitive Navigation mit Tastenkombinationen
-- **Browserübergreifend**: Funktioniert in allen modernen Browsern
+🔁 GIF-Unterstützung mit einstellbarer Wiederholung
 
-## Unterstützte Formate
+🖥 Vollbildmodus (automatisch/manuell)
 
-### Aktuelle Formate
-- JPG/JPEG
-- PNG
-- WebP (empfohlen)
-- GIF
+⏱ Konfigurierbare Anzeigedauer & Übergangszeit
 
-### Geplante Formate (kommende Versionen)
-- WebM Videos
-- MP4 Videos
+🧭 Tastatursteuerung (weiter, zurück, UI umschalten, Vollbild)
 
-## Installation
+🧩 Responsives Design für alle Bildschirmgrößen
 
-1. Laden Sie die Dateien `index.php` und `config.php` auf Ihren Webserver hoch
-2. Erstellen Sie ein Verzeichnis `assets/bilder/` auf Ihrem Server
-3. Legen Sie Ihre Bilder im `assets/bilder/` Verzeichnis ab (unterstützte Formate: JPG, JPEG, PNG, WEBP, GIF)
-4. (Optional) Erstellen Sie ein Verzeichnis `assets/fonts/` und legen Sie die Poppins-Schriftarten dort ab
+⚙️ Einstellungen über config.php im Browser anpassbar
 
-## Verwendung
+📁 Unterstützte Formate
+✅ Aktuell
+JPG / JPEG
 
-Die Slideshow kann auf zwei Arten eingebunden werden:
+PNG
 
-### Als iframe (empfohlen)
+WebP (empfohlen)
+
+GIF (inkl. Loop-Konfiguration)
+
+🛠 Geplant
+WebM-Videos
+
+MP4-Videos
+
+YouTube-Videos (Einbettung)
+
+🚀 Installation
+Lade index.php und config.php auf einen PHP-fähigen Webserver hoch.
+
+Erstelle den Ordner assets/pictures/
+
+Füge deine Bilder dort ein (JPG, PNG, WebP, GIF).
+
+(Optional) Lege Poppins-Schriftarten in assets/fonts/ ab.
+
+🌐 Einbindung
+Option 1: iframe (empfohlen)
 
 ```html
 <iframe src="index.php" width="100%" height="400" frameborder="0" allowfullscreen></iframe>
@@ -126,38 +122,29 @@ Die Slideshow kann auf zwei Arten eingebunden werden:
 ### Als direkter Link
 
 ```html
-<a href="index.php" target="_blank">Index öffnen</a>
+<a href="index.php" target="_blank">Slideshow öffnen</a>
 ```
 
-## URL-Parameter
+### 🛠 URL-Parameter (DE)
 
-Sie können verschiedene Parameter in der URL verwenden, um die Darstellung anzupassen:
+Steuere das Verhalten über URL-Parameter:
 
-- **mode**: Anzeigemodus (fade, slide, classic)
-- **interval**: Zeit zwischen Bildwechseln in ms (1000-60000)
-- **transition**: Übergangszeit in ms (200-3000)
-- **ui**: Bedienelemente anzeigen (1) oder verstecken (0)
-- **animation**: Animationstyp (slide-horizontal, slide-vertical, fade, zoom-in, zoom-out, flip, rotate, blur, cube)
+| Parameter   | Beschreibung                                              | Beispiel                |
+|-------------|-----------------------------------------------------------|-------------------------|
+| `mode`      | Anzeigemodus (`fade`, `slide`, `classic`)                | `mode=fade`             |
+| `interval`  | Bildanzeigedauer in Millisekunden (1000–60000)           | `interval=5000`         |
+| `transition`| Übergangszeit in Millisekunden (200–3000)                | `transition=1000`       |
+| `ui`        | UI anzeigen (`1`) oder ausblenden (`0`)                  | `ui=1`                  |
+| `animation` | Animationstyp: `slide-horizontal`, `slide-vertical`, `fade` | `animation=slide-horizontal` |
 
 Beispiel:
 ```
-index.php?mode=slide&interval=5000&transition=1000&ui=0&animation=flip
+index.php?mode=slide&interval=5000&transition=1000&ui=0&animation=slide-vertical
 ```
 
-## Tastatursteuerung
 
-- **Pfeiltasten (links/rechts)**: Vorheriges/nächstes Bild
-- **Leertaste**: Diashow starten/stoppen
-- **F**: Vollbildmodus ein/aus
-- **ESC**: Diashow stoppen oder Vollbildmodus beenden
-- **1**: Fade-Modus
-- **2**: Slide-Modus
-- **3**: Classic-Modus
+🔧 Einstellungsseite
+Rufe config.php im Browser auf, um deine Slideshow zu konfigurieren und eine Vorschau zu sehen.
 
-## Einstellungsseite
-
-Öffnen Sie `config.php` im Browser, um die Slideshow zu konfigurieren und eine Vorschau der Einstellungen zu sehen.
-
-## Lizenz
-
-MIT-Lizenz - Frei zur Verwendung für jeden Zweck. 
+📜 Lizenz
+MIT-Lizenz – frei für private und kommerzielle Nutzung.
