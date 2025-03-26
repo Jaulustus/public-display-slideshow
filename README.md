@@ -38,8 +38,9 @@ A lightweight, PHP-based image slideshow for public displays, shop windows, or i
 ```html
 <iframe src="index.php" width="100%" height="400" frameborder="0" allowfullscreen></iframe>
 ```
+```
 <a href="index.php" target="_blank">Open slideshow</a>
-
+```
 ### 🛠 URL Parameters (EN)
 
 Customize behavior using query parameters:
