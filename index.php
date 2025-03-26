@@ -108,10 +108,21 @@ if (is_dir($werbeDir)) {
 // Sortiere die Bilder (optional)
 sort($bilder);
 
-// Fallback Bild falls keine gefunden wurden
+// Wenn keine Bilder gefunden wurden, leite zur Konfigurationsseite weiter
 if (empty($bilder)) {
-    $debugInfo .= "No images found. Creating test images.\n";
-    // Mehrere Test-Bilder hinzufügen (als Base64 SVGs)
+    $debugInfo .= "No images found. Redirecting to config.php.\n";
+    
+    // Nur umleiten, wenn keine Debug-Anfrage ist
+    if (!$debug) {
+        // Setze die Session-Variable, um den Bilder-Tab aktiv zu machen
+        $_SESSION['active_tab'] = 'images';
+        
+        // Weiterleitung zur Konfigurationsseite
+        header('Location: config.php');
+        exit;
+    }
+    
+    // Im Debug-Modus trotzdem Beispielbilder erstellen
     $colors = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6'];
     $texts = ['Example Image 1', 'Example Image 2', 'Test Image 3', 'Demo 4', 'Sample 5'];
     
@@ -137,6 +148,7 @@ $animationType = isset($_GET['animation']) ? $_GET['animation'] : 'slide-horizon
 $interval = isset($_GET['interval']) ? max(1000, min(120000, (int)$_GET['interval'])) : 5000;
 $transitionTime = isset($_GET['transition']) ? max(200, min(3000, (int)$_GET['transition'])) : 1000;
 $showUI = isset($_GET['ui']) && $_GET['ui'] === '1';
+$gifLoops = isset($_GET['gif_loops']) ? max(1, min(10, (int)$_GET['gif_loops'])) : 1;
 
 // Überschreibe mit Session-Daten, wenn verfügbar
 if (isset($_SESSION['werbung_preview_settings'])) {
@@ -625,8 +637,16 @@ $style = "width: {$resolutionWidth}px; height: {$resolutionHeight}px;";
         const resolutionWidth = <?php echo (int)$resolutionWidth; ?>;
         const resolutionHeight = <?php echo (int)$resolutionHeight; ?>;
         const transitionTime = <?php echo $transitionTime; ?>;
+        const gifLoops = <?php echo $gifLoops; ?>; // Anzahl der GIF-Wiederholungen
         // Wiederholungsoption aus URL oder Standardeinstellung
         const isRepeat = <?php echo (isset($_GET['repeat']) && $_GET['repeat'] === '0') ? 'false' : ((isset($_GET['repeat']) && $_GET['repeat'] === '1') || (isset($sessionSettings['repeat']) && $sessionSettings['repeat'] === '1') || $settings['repeat'] ? 'true' : 'false'); ?>;
+        
+        // GIF-Tracker
+        let currentGifLoopCount = 0;
+        let isCurrentImageGif = false;
+        let gifAnimationTimer = null;
+        let gifElement = null;
+        let originalGifSrc = '';
         
         // Debug-Infos im Konsolenlogs
         console.log(`Advertisement.php initialized with ${images.length} images`);
@@ -993,58 +1013,288 @@ $style = "width: {$resolutionWidth}px; height: {$resolutionHeight}px;";
             }
         }
         
-        // Vorheriges Bild anzeigen
-        function prevImage() {
-            return changeImage(currentIndex - 1);
-        }
-        
         // Nächstes Bild anzeigen
         function nextImage() {
-            return changeImage(currentIndex + 1);
+            try {
+                // Wenn aktuelles Bild ein GIF ist und noch nicht alle Wiederholungen abgeschlossen, nichts tun
+                if (isSlideshow && isCurrentImageGif && currentGifLoopCount < gifLoops && gifLoops > 0) {
+                    console.log(`Skipping next image: GIF loop ${currentGifLoopCount}/${gifLoops} in progress`);
+                    return;
+                }
+                
+                // Stoppe die Slideshow (wird gleich neu gestartet wenn nötig)
+                if (slideshowInterval) {
+                    clearInterval(slideshowInterval);
+                    slideshowInterval = null;
+                }
+                
+                // Stoppe den GIF-Watcher
+                if (gifAnimationTimer) {
+                    clearTimeout(gifAnimationTimer);
+                    gifAnimationTimer = null;
+                }
+                
+                // Entferne das GIF-Element
+                if (gifElement) {
+                    document.body.removeChild(gifElement);
+                    gifElement = null;
+                }
+                
+                currentGifLoopCount = 0;
+                
+                // Verhindere Wechsel, wenn wir am Ende sind und nicht wiederholen sollen
+                if (currentIndex >= images.length - 1 && !isRepeat) {
+                    console.log("Last image reached without repeat - stopping");
+                    if (isSlideshow) toggleSlideshow();
+                    return false;
+                }
+                
+                // Reset GIF-Counter für das nächste Bild
+                currentGifLoopCount = 0;
+                
+                const nextIndex = (currentIndex + 1) % images.length;
+                return changeImage(nextIndex);
+            } catch (error) {
+                console.error(`Error in nextImage: ${error.message}`);
+                return false;
+            }
+        }
+        
+        // Vorheriges Bild anzeigen
+        function prevImage() {
+            try {
+                // Stoppe die Slideshow (wird gleich neu gestartet wenn nötig)
+                if (slideshowInterval) {
+                    clearInterval(slideshowInterval);
+                    slideshowInterval = null;
+                }
+                
+                // Stoppe den GIF-Watcher
+                if (gifAnimationTimer) {
+                    clearTimeout(gifAnimationTimer);
+                    gifAnimationTimer = null;
+                }
+                
+                // Entferne das GIF-Element
+                if (gifElement) {
+                    document.body.removeChild(gifElement);
+                    gifElement = null;
+                }
+                
+                currentGifLoopCount = 0;
+                
+                // Verhindere Wechsel, wenn wir am Anfang sind und nicht wiederholen sollen
+                if (currentIndex <= 0 && !isRepeat) {
+                    console.log("First image reached without repeat - stopping");
+                    if (isSlideshow) toggleSlideshow();
+                    return false;
+                }
+                
+                // Reset GIF-Counter für das vorherige Bild
+                currentGifLoopCount = 0;
+                
+                const prevIndex = (currentIndex - 1 + images.length) % images.length;
+                return changeImage(prevIndex);
+            } catch (error) {
+                console.error(`Error in prevImage: ${error.message}`);
+                return false;
+            }
         }
         
         // Allgemeine Funktion zum Bildwechsel
         function changeImage(index) {
-            console.log(`changeImage(${index}) called`);
-        
-            if (!images || images.length === 0) return false;
-        
-            if (isRepeat) {
-                index = (index + images.length) % images.length;
-            } else {
-                if (index < 0 || index >= images.length) return false;
+            try {
+                // Validate index
+                if (index < 0) {
+                    if (isRepeat) {
+                        index = images.length - 1;
+                    } else {
+                        return false;
+                    }
+                } else if (index >= images.length) {
+                    if (isRepeat) {
+                        index = 0;
+                    } else {
+                        return false;
+                    }
+                }
+                
+                if (index === currentIndex) {
+                    return true; // Kein Bildwechsel nötig
+                }
+                
+                currentIndex = index;
+                updateImageCounter(index);
+                
+                // Prüfen, ob aktuelles Bild ein GIF ist
+                checkIfCurrentImageIsGif();
+                
+                if (displayMode === 'classic') {
+                    // In Classic Mode, we directly change the background URL
+                    changeBackgroundClassic(currentIndex);
+                } else {
+                    changeBackgroundModern(currentIndex);
+                }
+                
+                return true;
+            } catch (error) {
+                console.error(`Error changing image: ${error.message}`);
+                return false;
             }
+        }
         
-            if (index === currentIndex) return true;
-        
-            currentIndex = index;
-        
-            if (displayMode === 'classic') {
-                changeBackgroundClassic(currentIndex);
-            } else {
-                changeBackgroundModern(currentIndex);
+        // Prüft, ob das aktuelle Bild ein GIF ist
+        function checkIfCurrentImageIsGif() {
+            try {
+                // Prüfe, ob die Bildinfo vorhanden ist
+                if (imageInfo && imageInfo[currentIndex]) {
+                    isCurrentImageGif = imageInfo[currentIndex].erweiterung.toLowerCase() === 'gif';
+                    console.log(`Current image is${isCurrentImageGif ? '' : ' not'} a GIF`);
+                    
+                    // Reset zähler bei neuem GIF
+                    if (isCurrentImageGif) {
+                        currentGifLoopCount = 0;
+                        
+                        // Wenn in Slideshow-Modus, setze GIF-Timer
+                        if (isSlideshow) {
+                            setupGifWatcher();
+                        }
+                    }
+                    return isCurrentImageGif;
+                }
+                return false;
+            } catch (error) {
+                console.error(`Error checking if image is GIF: ${error.message}`);
+                return false;
             }
+        }
         
-            return true;
+        // Setzt den Beobachter für GIF-Wiederholungen
+        function setupGifWatcher() {
+            // Falls ein alter Timer läuft, diesen löschen
+            if (gifAnimationTimer) {
+                clearTimeout(gifAnimationTimer);
+                gifAnimationTimer = null;
+            }
+            
+            // Nur für GIFs und wenn Loops eingestellt sind
+            if (!isCurrentImageGif || gifLoops <= 0) {
+                return;
+            }
+            
+            try {
+                // Finde das aktuelle Bild-Element
+                let imgElement = null;
+                
+                if (displayMode === 'classic') {
+                    // Im Classic-Modus ist das Bild ein Hintergrundbild, wir müssen einen anderen Ansatz wählen
+                    // Wir erstellen ein verstecktes Bild-Element zum Zählen
+                    imgElement = document.createElement('img');
+                    imgElement.style.position = 'absolute';
+                    imgElement.style.opacity = '0';
+                    imgElement.style.pointerEvents = 'none';
+                    imgElement.style.width = '1px';
+                    imgElement.style.height = '1px';
+                    document.body.appendChild(imgElement);
+                } else {
+                    // In anderen Modi finden wir das aktive Bild
+                    const activeSlide = document.querySelector('.slide.active');
+                    if (activeSlide) {
+                        // Nehme den Hintergrund-URL und erstelle ein Bild-Element
+                        const style = window.getComputedStyle(activeSlide);
+                        const bgImage = style.backgroundImage;
+                        const url = bgImage.match(/url\(['"]?(.*?)['"]?\)/);
+                        
+                        if (url && url[1]) {
+                            imgElement = document.createElement('img');
+                            imgElement.style.position = 'absolute';
+                            imgElement.style.opacity = '0';
+                            imgElement.style.pointerEvents = 'none';
+                            imgElement.style.width = '1px';
+                            imgElement.style.height = '1px';
+                            document.body.appendChild(imgElement);
+                        }
+                    }
+                }
+                
+                if (!imgElement) {
+                    console.error("Cannot find or create image element for GIF tracking");
+                    return;
+                }
+                
+                // Speichere das Element für späteren Zugriff
+                gifElement = imgElement;
+                
+                // Setze die aktuelle Bildquelle
+                originalGifSrc = images[currentIndex];
+                gifElement.src = originalGifSrc;
+                
+                console.log(`GIF watcher set up for ${gifLoops} loops`);
+                
+                // GIF-Animation-Ende erkennen (ein Loop abgeschlossen)
+                // Da wir kein direktes Event für GIF-Loops haben, müssen wir clever sein:
+                // Wir laden das GIF neu, wenn ein Loop abgeschlossen sein sollte
+                
+                // Durchschnittliche GIF-Dauer: 2-3 Sekunden (nehmen wir 3 zur Sicherheit)
+                const estimatedOneLoopTime = 3000;
+                gifAnimationTimer = setTimeout(checkGifLoop, estimatedOneLoopTime);
+                
+                function checkGifLoop() {
+                    if (!isSlideshow || !isCurrentImageGif) {
+                        // Aufräumen, wenn wir nicht mehr im Slideshow-Modus sind
+                        // oder es kein GIF mehr ist
+                        if (gifElement) {
+                            document.body.removeChild(gifElement);
+                            gifElement = null;
+                        }
+                        return;
+                    }
+                    
+                    // Eine Wiederholung zählen
+                    currentGifLoopCount++;
+                    console.log(`GIF loop ${currentGifLoopCount}/${gifLoops} completed`);
+                    
+                    if (currentGifLoopCount >= gifLoops) {
+                        // Alle Wiederholungen abgeschlossen
+                        console.log(`All ${gifLoops} GIF loops completed, moving to next image`);
+                        
+                        // Aufräumen
+                        if (gifElement) {
+                            document.body.removeChild(gifElement);
+                            gifElement = null;
+                        }
+                        
+                        // Zum nächsten Bild gehen
+                        nextImage();
+                        return;
+                    }
+                    
+                    // GIF neu laden, um die Animation von vorne anzuzeigen
+                    // Füge ein zufälliges Query-Parameter, um den Browser-Cache zu umgehen
+                    const timestamp = Date.now();
+                    gifElement.src = originalGifSrc + (originalGifSrc.includes('?') ? '&' : '?') + 'cachebust=' + timestamp;
+                    
+                    // Für die nächste Wiederholung überwachen
+                    gifAnimationTimer = setTimeout(checkGifLoop, estimatedOneLoopTime);
+                }
+                
+            } catch (error) {
+                console.error(`Error setting up GIF watcher: ${error.message}`);
+            }
         }
         
         // Diashow starten/stoppen
         function toggleSlideshow() {
             isSlideshow = !isSlideshow;
-            console.log(`Slideshow ${isSlideshow ? 'started' : 'stopped'}`);
             
-            // Aktualisieren der UI
+            // Update button text
             if (slideshowButton) {
                 slideshowButton.textContent = isSlideshow ? 'Stop Slideshow' : 'Start Slideshow';
             }
             
             if (isSlideshow) {
-                // Starte die Slideshow
                 try {
-                    // Sicherstellen, dass mindestens 2 Bilder vorhanden sind für eine sinnvolle Diashow
-                    if (images.length < 2) {
-                        console.warn("Less than 2 images available - Slideshow might be unnecessary");
-                    }
+                    console.log("Starting slideshow");
                     
                     // Sicherstellen, dass wir bei Repeat-Modus am Ende nicht stehen bleiben
                     if (isRepeat && currentIndex >= images.length - 1) {
@@ -1052,24 +1302,26 @@ $style = "width: {$resolutionWidth}px; height: {$resolutionHeight}px;";
                         currentIndex = -1; // Will be set to 0 in next nextImage()
                     }
                     
-                    // Interval für automatischen Bildwechsel
-                    slideshowInterval = setInterval(() => {
-                        // Wenn wir am Ende sind und Repeat aktiv ist, explizit zum ersten Bild springen
-                        if (isRepeat && currentIndex >= images.length - 1) {
-                            console.log("Last image reached with repeat - jumping to beginning");
-                            currentIndex = -1; // Will be set to 0 in nextImage()
-                        }
-                        
-                        const result = nextImage();
-                        
-                        // Bei Fehlern oder wenn wir am Ende sind und kein Repeat aktiv ist
-                        if (!result && isSlideshow) {
-                            console.error("Image change failed, stopping slideshow");
-                            toggleSlideshow();
-                        }
-                    }, slideshowDelay);
+                    // Nach Bildwechsel prüfen, ob neues Bild ein GIF ist
+                    checkIfCurrentImageIsGif();
                     
-                    console.log(`Slideshow interval set: ${slideshowDelay}ms`);
+                    // Wenn aktuelles Bild ein GIF ist und wir Wiederholungen verfolgen sollen
+                    if (isCurrentImageGif && gifLoops > 0) {
+                        setupGifWatcher();
+                    } else {
+                        // Normaler Intervall für nicht-GIF Bilder oder wenn keine GIF-Wiederholungen konfiguriert
+                        slideshowInterval = setInterval(() => {
+                            const result = nextImage();
+                            
+                            // Bei Fehlern oder wenn wir am Ende sind und kein Repeat aktiv ist
+                            if (!result && isSlideshow) {
+                                console.error("Image change failed, stopping slideshow");
+                                toggleSlideshow();
+                            }
+                        }, slideshowDelay);
+                        
+                        console.log(`Standard slideshow interval set: ${slideshowDelay}ms`);
+                    }
                 } catch (error) {
                     console.error(`Error starting slideshow: ${error.message}`);
                     isSlideshow = false;
@@ -1083,10 +1335,19 @@ $style = "width: {$resolutionWidth}px; height: {$resolutionHeight}px;";
                     clearInterval(slideshowInterval);
                     console.log("Slideshow interval cleared");
                 }
+                
+                // Stoppe auch den GIF-Timer und entferne das GIF-Element
+                if (gifAnimationTimer) {
+                    clearTimeout(gifAnimationTimer);
+                    gifAnimationTimer = null;
+                }
+                
+                if (gifElement) {
+                    document.body.removeChild(gifElement);
+                    gifElement = null;
+                }
             }
         }
-        
-
         
         // Automatisch starten nach dem Laden
         document.addEventListener('DOMContentLoaded', () => {
@@ -1139,6 +1400,9 @@ $style = "width: {$resolutionWidth}px; height: {$resolutionHeight}px;";
                 console.error("Initial image check failed");
             }
             
+            // Prüfe, ob das aktuelle Bild ein GIF ist
+            checkIfCurrentImageIsGif();
+            
             // Automatisch Vollbild starten
             if (autofullscreen) {
                 console.log("Starting fullscreen mode automatically");
@@ -1152,11 +1416,18 @@ $style = "width: {$resolutionWidth}px; height: {$resolutionHeight}px;";
                 if (slideshowButton) {
                     slideshowButton.textContent = 'Stop Slideshow';
                 }
-                slideshowInterval = setInterval(() => {
-                    nextImage();
-                }, slideshowDelay);
-                console.log(`Slideshow interval set: ${slideshowDelay}ms`);
-                nextImage(); // Start with next image
+                
+                // Wenn aktuelles Bild ein GIF ist, Beobachter einrichten
+                if (isCurrentImageGif && gifLoops > 0) {
+                    setupGifWatcher();
+                } else {
+                    // Standard-Intervall für normale Bilder
+                    slideshowInterval = setInterval(() => {
+                        nextImage();
+                    }, slideshowDelay);
+                    
+                    console.log(`Slideshow interval set: ${slideshowDelay}ms`);
+                }
             }
         });
         

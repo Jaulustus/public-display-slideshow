@@ -2,6 +2,20 @@
 // Starte Session, um Einstellungen zu übertragen
 session_start();
 
+// Bestimme den aktiven Tab aus der Session oder als Standard "settings"
+$activeTab = isset($_SESSION['active_tab']) ? $_SESSION['active_tab'] : 'settings';
+
+// Tab-Wechsel über URL-Parameter verarbeiten
+if (isset($_GET['set_tab']) && in_array($_GET['set_tab'], ['settings', 'help', 'images'])) {
+    $_SESSION['active_tab'] = $_GET['set_tab'];
+    
+    // Wenn nur ein Tab-Wechsel angefordert wurde, Antwort senden und beenden
+    if (!isset($_GET['mode']) && !isset($_POST['save_settings']) && !isset($_POST['upload_images']) && !isset($_POST['delete_image'])) {
+        echo 'Tab set to: ' . $_SESSION['active_tab'];
+        exit;
+    }
+}
+
 // Übersetzungsfunktion
 function translate($text) {
     static $translations = [
@@ -64,7 +78,8 @@ function translate($text) {
         'Best Practices' => ['en' => 'Best Practices'],
         'Sicherheit' => ['en' => 'Security'],
         'Performance' => ['en' => 'Performance'],
-        'Wartung' => ['en' => 'Maintenance']
+        'Wartung' => ['en' => 'Maintenance'],
+        'GIF-Wiederholungen' => ['en' => 'GIF Loops']
     ];
 
     // Bestimme die Sprache
@@ -104,11 +119,12 @@ $defaultSettings = [
     'autostart' => true,
     'fullscreen' => false,
     'animation' => 'slide-horizontal',
-    'repeat' => true  // Neue Einstellung für Wiederholung
+    'repeat' => true,  // Neue Einstellung für Wiederholung
+    'gif_loops' => 1   // Anzahl der GIF-Wiederholungen, bevor zum nächsten Bild gewechselt wird
 ];
 
 // Pfad zur Einstellungsdatei
-$settingsFile = 'assets/werbung-settings.json';
+$settingsFile = 'assets/index-settings.json';
 
 // Stelle sicher, dass das Verzeichnis existiert
 if (!is_dir('assets')) {
@@ -124,8 +140,8 @@ if (file_exists($settingsFile)) {
     }
 }
 
-// Stellen wir sicher, dass das Werbung-Verzeichnis existiert
-$werbeDir = 'assets/werbung/';
+// Stellen wir sicher, dass das Index-Verzeichnis existiert
+$werbeDir = 'assets/pictures/';
 if (!is_dir($werbeDir)) {
     mkdir($werbeDir, 0755, true);
 }
@@ -141,6 +157,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_settings'])) {
         'fullscreen' => isset($_POST['fullscreen']),
         'animation' => isset($_POST['animation']) ? $_POST['animation'] : $defaultSettings['animation'],
         'repeat' => isset($_POST['repeat']),  // Neue Einstellung für Wiederholung
+        'gif_loops' => isset($_POST['gif_loops']) ? (int)$_POST['gif_loops'] : $defaultSettings['gif_loops']
     ];
     
     // Konvertiere Sekunden in Millisekunden, wenn nötig
@@ -182,8 +199,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_settings'])) {
             'timestamp' => time() // Timestamp hinzufügen, um Cache zu umgehen
         ];
         
+        // Behalte den aktiven Tab bei
+        $_SESSION['active_tab'] = $activeTab;
+        
         // Setze URL für Weiterleitung
-        $redirectUrl = 'werbung.php';
+        $redirectUrl = 'index.php';
     } else {
         $message = 'Fehler beim Speichern der Einstellungen. Bitte überprüfe die Schreibrechte.';
         $messageType = 'error';
@@ -243,6 +263,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_images'])) {
         $message = 'Fehler beim Hochladen der Bilder';
         $messageType = 'error';
     }
+    
+    // Setze den aktiven Tab auf Bildverwaltung
+    $_SESSION['active_tab'] = 'images';
 }
 
 // Verarbeite Bild-Löschung
@@ -263,6 +286,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_image'])) {
         $message = 'Ungültiger Bildpfad';
         $messageType = 'error';
     }
+    
+    // Setze den aktiven Tab auf Bildverwaltung
+    $_SESSION['active_tab'] = 'images';
 }
 
 // Generiere die Vorschau-URL
@@ -273,10 +299,11 @@ $previewParams = http_build_query([
     'transition' => $settings['transition'],
     'ui' => '1', // UI immer anzeigen in der Vorschau
     'animation' => $settings['animation'],
+    'gif_loops' => $settings['gif_loops'], // GIF-Wiederholungseinstellung
     'preview' => '1', // Markiere als Vorschau, um Cache zu vermeiden
     'ts' => time() // Timestamp hinzufügen, um Cache zu umgehen
 ]);
-$previewUrl = "werbung.php?$previewParams";
+$previewUrl = "index.php?$previewParams";
 
 // Verfügbare Animationen
 $animationOptions = [
@@ -432,16 +459,18 @@ $transitionDisplay = getTransitionForDisplay($settings['transition']);
         
         .preview-container {
             width: 100%;
+            max-width: 800px;
+            margin: 0 auto 20px;
             overflow: hidden;
             border-radius: var(--border-radius);
-            margin-bottom: 0;
             position: relative;
+            border: 1px solid #ddd;
         }
         
-        .preview-container[data-ratio="16:9"] { height: calc(100vw * 9 / 16); }
-        .preview-container[data-ratio="9:16"] { height: calc(100vw * 16 / 9); }
-        .preview-container[data-ratio="1:1"] { height: 100vw; }
-        .preview-container[data-ratio="21:9"] { height: calc(100vw * 9 / 21); }
+        .preview-container[data-ratio="16:9"] { height: 450px; }
+        .preview-container[data-ratio="9:16"] { height: 600px; }
+        .preview-container[data-ratio="1:1"] { height: 500px; }
+        .preview-container[data-ratio="21:9"] { height: 400px; }
         
         .preview-frame {
             width: 100%;
@@ -583,10 +612,10 @@ $transitionDisplay = getTransitionForDisplay($settings['transition']);
             margin-top: 5px;
         }
         
-        .preview-container[data-ratio="16:9"] { height: calc(100vw * 9 / 16); }
-        .preview-container[data-ratio="9:16"] { height: calc(100vw * 16 / 9); }
-        .preview-container[data-ratio="1:1"] { height: 100vw; }
-        .preview-container[data-ratio="21:9"] { height: calc(100vw * 9 / 21); }
+        .preview-container[data-ratio="16:9"] { height: 450px; }
+        .preview-container[data-ratio="9:16"] { height: 600px; }
+        .preview-container[data-ratio="1:1"] { height: 500px; }
+        .preview-container[data-ratio="21:9"] { height: 400px; }
         
         .image-grid {
             display: grid;
@@ -665,12 +694,12 @@ $transitionDisplay = getTransitionForDisplay($settings['transition']);
         <?php endif; ?>
         
         <div class="tabs">
-            <button class="tab-button active" data-tab="settings"><?php echo t('Einstellungen'); ?></button>
-            <button class="tab-button" data-tab="help"><?php echo t('Anleitung'); ?></button>
-            <button class="tab-button" data-tab="images"><?php echo t('Bildverwaltung'); ?></button>
+            <button class="tab-button <?php echo $activeTab === 'settings' ? 'active' : ''; ?>" data-tab="settings"><?php echo t('Einstellungen'); ?></button>
+            <button class="tab-button <?php echo $activeTab === 'help' ? 'active' : ''; ?>" data-tab="help"><?php echo t('Anleitung'); ?></button>
+            <button class="tab-button <?php echo $activeTab === 'images' ? 'active' : ''; ?>" data-tab="images"><?php echo t('Bildverwaltung'); ?></button>
         </div>
         
-        <div class="tab-content active" id="settings">
+        <div class="tab-content <?php echo $activeTab === 'settings' ? 'active' : ''; ?>" id="settings">
             <div class="card">
                 <h2><?php echo t('Vorschau'); ?></h2>
                 <div class="form-group">
@@ -745,6 +774,19 @@ $transitionDisplay = getTransitionForDisplay($settings['transition']);
                     </div>
                     
                     <div class="form-group">
+                        <label for="gif_loops"><?php echo t('GIF-Wiederholungen'); ?></label>
+                        <div class="input-group">
+                            <input type="number" id="gif_loops" name="gif_loops" 
+                                 value="<?php echo isset($settings['gif_loops']) ? $settings['gif_loops'] : 1; ?>" 
+                                 min="1" 
+                                 max="10" 
+                                 step="1"
+                                 class="input-with-unit">
+                        </div>
+                        <small class="form-text"><?php echo t('Anzahl der Wiederholungen eines GIF-Bildes, bevor zum nächsten Bild gewechselt wird. (1-10)'); ?></small>
+                    </div>
+                    
+                    <div class="form-group">
                         <label for="orientation"><?php echo t('Ausrichtung'); ?></label>
                         <input type="checkbox" id="orientation" name="orientation" class="input-with-unit"> <?php echo t('Vertikal'); ?>
                     </div>
@@ -796,7 +838,7 @@ $transitionDisplay = getTransitionForDisplay($settings['transition']);
             </div>
         </div>
         
-        <div class="tab-content" id="help">
+        <div class="tab-content <?php echo $activeTab === 'help' ? 'active' : ''; ?>" id="help">
             <div class="card">
                 <h2><?php echo t('Konfiguration'); ?></h2>
                 <p><?php echo t('Die Konfiguration erfolgt über die Datei config.php. Hier finden Sie alle wichtigen Einstellungen:'); ?></p>
@@ -834,12 +876,12 @@ $transitionDisplay = getTransitionForDisplay($settings['transition']);
                 <h2><?php echo t('Beispiele'); ?></h2>
                 <h3><?php echo t('Einfache Integration'); ?></h3>
                 <div class="code-box">
-                    &lt;iframe src="werbung.php" width="100%" height="400" frameborder="0" allowfullscreen&gt;&lt;/iframe&gt;
+                    &lt;iframe src="index.php" width="100%" height="400" frameborder="0" allowfullscreen&gt;&lt;/iframe&gt;
                 </div>
 
                 <h3><?php echo t('Mit Parametern'); ?></h3>
                 <div class="code-box">
-                    &lt;iframe src="werbung.php?mode=slide&interval=5000&transition=1000&ui=0" width="100%" height="400" frameborder="0" allowfullscreen&gt;&lt;/iframe&gt;
+                    &lt;iframe src="index.php?mode=slide&interval=5000&transition=1000&ui=0" width="100%" height="400" frameborder="0" allowfullscreen&gt;&lt;/iframe&gt;
                 </div>
             </div>
 
@@ -922,7 +964,7 @@ $transitionDisplay = getTransitionForDisplay($settings['transition']);
             </div>
         </div>
         
-        <div class="tab-content" id="images">
+        <div class="tab-content <?php echo $activeTab === 'images' ? 'active' : ''; ?>" id="images">
             <div class="card">
                 <h2><?php echo t('Bilder hochladen'); ?></h2>
                 <form method="post" enctype="multipart/form-data" class="upload-form">
@@ -942,8 +984,22 @@ $transitionDisplay = getTransitionForDisplay($settings['transition']);
                     <?php
                     $imageDir = 'assets/pictures/';
                     if (is_dir($imageDir)) {
-                        $images = glob($imageDir . '*.{jpg,jpeg,png,webp,gif}', GLOB_BRACE);
-                        foreach ($images as $image) {
+                        // Verbesserte Methode zum Finden aller Bilder, auch mit Großbuchstaben-Endungen
+                        $bilder = [];
+                        $dateien = scandir($imageDir);
+                        
+                        foreach ($dateien as $datei) {
+                            if ($datei === '.' || $datei === '..') {
+                                continue;
+                            }
+                            
+                            $erweiterung = strtolower(pathinfo($datei, PATHINFO_EXTENSION));
+                            if (in_array($erweiterung, ['jpg', 'jpeg', 'png', 'webp', 'gif'])) {
+                                $bilder[] = $imageDir . $datei;
+                            }
+                        }
+                        
+                        foreach ($bilder as $image) {
                             $fileName = basename($image);
                             echo '<div class="image-item">';
                             echo '<img src="' . htmlspecialchars($image) . '" alt="' . htmlspecialchars($fileName) . '">';
@@ -966,18 +1022,82 @@ $transitionDisplay = getTransitionForDisplay($settings['transition']);
         const tabButtons = document.querySelectorAll('.tab-button');
         const tabContents = document.querySelectorAll('.tab-content');
         
+        // URL-Hash zu Tab-ID Mapping
+        const hashToTabMapping = {
+            'einstellungen': 'settings',
+            'anleitung': 'help',
+            'bildverwaltung': 'images',
+            'settings': 'settings',
+            'help': 'help',
+            'images': 'images'
+        };
+        
+        // Funktion zum Aktivieren eines Tabs
+        function activateTab(tabId) {
+            // Finde die entsprechende Tab-ID aus dem Mapping
+            const actualTabId = hashToTabMapping[tabId] || tabId;
+            
+            // Deaktiviere alle Tabs
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            tabContents.forEach(content => content.classList.remove('active'));
+            
+            // Aktiviere den gewählten Tab
+            const tabButton = document.querySelector(`.tab-button[data-tab="${actualTabId}"]`);
+            if (tabButton) {
+                tabButton.classList.add('active');
+                document.getElementById(actualTabId).classList.add('active');
+                
+                // Aktualisiere die Session
+                fetch('config.php?set_tab=' + actualTabId, { method: 'GET' });
+            }
+        }
+        
+        // Aktiven Tab aus Session setzen, falls vorhanden
+        document.addEventListener('DOMContentLoaded', () => {
+            <?php if (isset($_SESSION['active_tab'])): ?>
+            // Tab aus Session aktivieren
+            const activeTab = '<?php echo $_SESSION['active_tab']; ?>';
+            const activeTabButton = document.querySelector(`.tab-button[data-tab="${activeTab}"]`);
+            
+            if (activeTabButton) {
+                // Aktiviere den Tab aus der Session
+                activateTab(activeTab);
+            }
+            <?php endif; ?>
+            
+            // Hash-Navigation hat Vorrang vor Session
+            if (window.location.hash) {
+                const hashValue = window.location.hash.substring(1);
+                activateTab(hashValue);
+            }
+        });
+        
+        // Event-Listener für Tab-Buttons
         tabButtons.forEach(button => {
             button.addEventListener('click', () => {
                 const tab = button.dataset.tab;
                 
-                // Deaktiviere alle Tabs
-                tabButtons.forEach(btn => btn.classList.remove('active'));
-                tabContents.forEach(content => content.classList.remove('active'));
+                // Setze den Tab in der URL
+                const germanTab = Object.keys(hashToTabMapping).find(key => 
+                    hashToTabMapping[key] === tab && key !== tab);
                 
-                // Aktiviere den gewählten Tab
-                button.classList.add('active');
-                document.getElementById(tab).classList.add('active');
+                if (germanTab) {
+                    window.location.hash = germanTab;
+                } else {
+                    window.location.hash = tab;
+                }
+                
+                // Aktiviere den Tab
+                activateTab(tab);
             });
+        });
+        
+        // Event-Listener für Hash-Änderungen
+        window.addEventListener('hashchange', () => {
+            if (window.location.hash) {
+                const hashValue = window.location.hash.substring(1);
+                activateTab(hashValue);
+            }
         });
         
         // Live-Vorschau
@@ -1016,12 +1136,12 @@ $transitionDisplay = getTransitionForDisplay($settings['transition']);
                 transition: transitionValue,
                 ui: '1',
                 animation: animation,
+                gif_loops: $settings['gif_loops'], // GIF-Wiederholungseinstellung
                 preview: '1', // Markiere als Vorschau, um Cache zu vermeiden
-                ts: Date.now(),
-                resolution: document.getElementById('resolution').value // Add resolution to URL
+                ts: time() // Timestamp hinzufügen, um Cache zu umgehen
             });
             
-            previewFrame.src = `werbung.php?${params.toString()}`;
+            previewFrame.src = `index.php?${params.toString()}`;
         }
         
         // Füge Event-Listener für Einheiten-Änderungen hinzu
@@ -1100,7 +1220,7 @@ $transitionDisplay = getTransitionForDisplay($settings['transition']);
             });
             
             // Öffne neuen Tab mit den aktuellen Einstellungen
-            window.open('werbung.php?' + params.toString(), '_blank');
+            window.open('index.php?' + params.toString(), '_blank');
             
             // Das Formular wird normal abgesendet (kein e.preventDefault())
         });
